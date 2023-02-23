@@ -1,0 +1,43 @@
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04 as build
+
+WORKDIR /home/dev
+
+COPY . .
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends software-properties-common libtbb-dev pkg-config cmake git wget
+RUN git clone --depth 1 --branch 4.x https://github.com/opencv/opencv.git && cd opencv && git clone --depth 1 --branch 4.x https://github.com/opencv/opencv_contrib.git contrib && \
+    mkdir build && cd build && \
+    cmake .. -D CMAKE_BUILD_TYPE=RELEASE \
+    -D WITH_IPP=OFF \
+    -D WITH_OPENGL=OFF \
+    -D WITH_QT=OFF \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D OPENCV_EXTRA_MODULES_PATH=../contrib/modules \
+    -D OPENCV_ENABLE_NONFREE=ON \
+    -D WITH_JASPER=OFF \
+    -D WITH_TBB=ON \
+    -D WITH_SIMD=ON \
+    -D BUILD_DOCS=OFF \
+    -D BUILD_EXAMPLES=OFF \
+    -D BUILD_TESTS=OFF \
+    -D BUILD_PERF_TESTS=OFF \
+    -D BUILD_opencv_java=NO \
+    -D BUILD_opencv_python=NO \
+    -D BUILD_opencv_python2=NO \
+    -D BUILD_opencv_python3=NO \
+    -D BUILD_CUDA_STUBS=ON \
+    -D OPENCV_DNN_CUDA=ON \
+    -D WITH_CUDA=ON \
+    -D CUDA_ARCH_BIN=7.5 \
+    -D OPENCV_GENERATE_PKGCONFIG=ON \
+    && make -j $(nproc --all) \
+    && make install
+
+WORKDIR /home/dev/source/build
+
+RUN wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1zXR4ab_VulykpaNcHY8iRWzTPVJXXe0p' -O yolov5m_based.onnx
+
+RUN cmake .. -D CMAKE_BUILD_TYPE=RELEASE \
+    && make
+    
+CMD /home/dev/source/build/perftest
